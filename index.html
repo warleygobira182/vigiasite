@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VigiaSite - Monitoramento 24/7 do Seu Site</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 160px 0 80px;
+            text-align: center;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Features */
+        .features {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* CTA */
+        .cta {
+            background: #667eea;
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Footer */
+        footer {
+            background: #2d3748;
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">VigiaSite</div>
+                <div class="nav-links">
+                    <a href="#features">Funcionalidades</a>
+                    <a href="#precos">Preços</a>
+                    <a href="#contato">Contato</a>
+                </div>
+                <a href="#cta" class="btn">Começar Gratuitamente</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Seu Site Nunca Mais Cairá Despercebido</h1>
+            <p>Monitoramento 24/7 com alertas instantâneos no Telegram. Receba avisos antes que seus clientes percebam.</p>
+            <a href="#cta" class="btn" style="background: white; color: #667eea; font-size: 1.1rem;">
+                Testar 14 Dias Grátis
+            </a>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 1rem;">Como o VigiaSite Protege Seu Negócio</h2>
+            <p style="text-align: center; font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto 3rem;">
+                Tecnologia simples que evita prejuízos
+            </p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⏱️</div>
+                    <h3>Verificação a Cada 5 Minutos</h3>
+                    <p>Seu site é verificado constantemente. Qualquer queda é detectada instantaneamente.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Alertas no Telegram</h3>
+                    <p>Receba notificações direto no seu celular quando seu site ficar offline.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Dashboard Simples</h3>
+                    <p>Acompanhe o status de todos seus sites em um painel intuitivo e claro.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="precos" class="features" style="background: #f8f9fa;">
+        <div class="container">
+            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 1rem;">Preços Acessíveis</h2>
+            <p style="text-align: center; font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto 3rem;">
+                Comece grátis, cresça conosco
+            </p>
+            
+            <div class="features-grid">
+                <div class="feature-card" style="background: white;">
+                    <h3>Plano Básico</h3>
+                    <div style="font-size: 2rem; font-weight: bold; color: #667eea; margin: 1rem 0;">R$ 19<span style="font-size: 1rem; color: #666;">/mês</span></div>
+                    <ul style="text-align: left; list-style: none; margin: 1.5rem 0;">
+                        <li>✅ 10 sites monitorados</li>
+                        <li>✅ Verificação a cada 5 min</li>
+                        <li>✅ Alertas no Telegram</li>
+                        <li>✅ Suporte por email</li>
+                    </ul>
+                    <a href="#cta" class="btn">Começar Agora</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section id="cta" class="cta">
+        <div class="container">
+            <h2>Não Deixe Seu Site Cair Sem Aviso</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.9;">
+                Junte-se aos primeiros usuários e garanta preço especial de lançamento
+            </p>
+            
+            <!-- Form de Lista de Espera -->
+            <form id="waitlist-form" style="max-width: 400px; margin: 0 auto;">
+                <input type="email" placeholder="Seu melhor email" required 
+                       style="width: 100%; padding: 1rem; border: none; border-radius: 5px; margin-bottom: 1rem; font-size: 1rem;">
+                <button type="submit" class="btn" style="background: white; color: #667eea; width: 100%;">
+                    Entrar na Lista de Espera
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 VigiaSite. Todos os direitos reservados.</p>
+            <p style="margin-top: 0.5rem; opacity: 0.8;">Monitoramento inteligente para seu negócio</p>
+        </div>
+    </footer>
+
+    <script>
+        // Form de lista de espera
+        document.getElementById('waitlist-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = this.querySelector('input[type="email"]').value;
+            alert('Obrigado! Em breve entraremos em contato com mais informações.');
+            this.reset();
+        });
+    </script>
+</body>
+</html>
