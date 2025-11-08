@@ -1,16 +1,7 @@
 {
   "name": "vigiasite",
-  "version": "1.0.0",
-  "description": "Monitoramento de sites com alertas no Telegram",
-  "main": "index.html",
-  "scripts": {
-    "dev": "vercel dev",
-    "start": "node api/monitor.js"
-  },
+  "type": "module",
   "dependencies": {
-    "node-fetch": "^2.6.7"
-  },
-  "keywords": ["monitoring", "telegram", "uptime"],
-  "author": "Warley Gobira",
-  "license": "MIT"
+    "node-fetch": "^3.3.2"
+  }
 }
