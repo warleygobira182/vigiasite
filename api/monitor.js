@@ -9,31 +9,45 @@ module.exports = async (req, res) => {
 
   if (req.method === 'POST') {
     try {
-      const { url } = req.body;
+      const { url, chatId } = req.body;
       
       if (!url) {
         return res.status(400).json({ error: 'URL é obrigatória' });
       }
 
-      // SIMULAÇÃO - Vamos implementar a verificação real depois
-      const isOnline = Math.random() > 0.3; // 70% de chance de estar online
-      
-      if (isOnline) {
+      // VERIFICAÇÃO REAL DO SITE (usando fetch nativo da Vercel)
+      const startTime = Date.now();
+      const response = await fetch(url);
+      const responseTime = Date.now() - startTime;
+
+      if (response.ok) {
+        // Site ONLINE
         return res.json({ 
           status: 'online',
-          responseTime: Math.floor(Math.random() * 500) + 100,
-          message: `✅ ${url} está ONLINE`
+          responseTime: responseTime,
+          message: `✅ ${url} está ONLINE (${responseTime}ms)`
         });
       } else {
+        // Site OFFLINE - Enviar alerta para Telegram
+        if (chatId) {
+          await sendTelegramAlert(chatId, `🚨 ALERTA: ${url} está OFFLINE!`);
+        }
+        
         return res.json({ 
           status: 'offline', 
-          message: `❌ ${url} está OFFLINE`
+          message: `❌ ${url} está OFFLINE - Status: ${response.status}`
         });
       }
     } catch (error) {
+      // Erro na verificação - Site OFFLINE
+      const { chatId } = req.body;
+      if (chatId) {
+        await sendTelegramAlert(chatId, `🚨 ALERTA: ${url} está INACESSÍVEL!`);
+      }
+      
       return res.json({ 
         status: 'error',
-        message: `❌ Erro ao verificar ${url}`
+        message: `❌ ${url} está INACESSÍVEL - Erro: ${error.message}`
       });
     }
   }
@@ -47,3 +61,27 @@ module.exports = async (req, res) => {
     timestamp: new Date().toISOString()
   });
 };
+
+// Função para enviar alertas no Telegram
+async function sendTelegramAlert(chatId, message) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  
+  if (!token) {
+    console.log('Token do Telegram não configurado');
+    return;
+  }
+
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML'
+      })
+    });
+  } catch (error) {
+    console.log('Erro ao enviar alerta para Telegram:', error);
+  }
+}
