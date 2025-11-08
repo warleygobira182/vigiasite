@@ -1,99 +1,44 @@
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+// No início do arquivo, adicione:
+let sitesClientes = [];
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method === 'POST') {
+// Função de verificação automática
+async function verificarSitesAutomaticamente() {
+  console.log('🤖 VERIFICAÇÃO AUTOMÁTICA INICIADA');
+  
+  for (const site of sitesClientes) {
     try {
-      const { url, testAlert = false } = req.body;
+      const response = await fetch(site.url);
       
-      if (!url) {
-        return res.status(400).json({ error: 'URL é obrigatória' });
+      if (site.status === 'online' && !response.ok) {
+        // SITE CAIU!
+        await enviarAlertaTelegram(site.chatId, `🚨 ALERTA: ${site.url} CAIU!`);
+        site.status = 'offline';
       }
-
-      console.log(`🔍 Verificando: ${url}`);
       
-      // SIMULAÇÃO INTELIGENTE - Funciona 100% e é confiável
-      const sitesQueFuncionam = [
-        'google.com', 'github.com', 'facebook.com', 'twitter.com',
-        'instagram.com', 'youtube.com', 'netflix.com', 'amazon.com',
-        'mercadolivre.com.br', 'olx.com.br'
-      ];
-      
-      const domain = url.replace('https://', '').replace('http://', '').split('/')[0];
-      const siteExiste = sitesQueFuncionam.some(site => domain.includes(site));
-      
-      if (siteExiste) {
-        // Site "existe" na nossa lista - simula online
-        const responseTime = Math.floor(Math.random() * 300) + 50;
-        
-        if (testAlert) {
-          await sendTelegramAlert(`✅ TESTE: ${url} está ONLINE (${responseTime}ms) - Sistema funcionando!`);
-        }
-        
-        return res.json({ 
-          status: 'online',
-          responseTime: responseTime,
-          message: `✅ ${url} está ONLINE (${responseTime}ms)`
-        });
-      } else {
-        // Site não está na lista - simula offline
-        await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está OFFLINE!\nO site não está respondendo.`);
-        
-        return res.json({ 
-          status: 'offline', 
-          message: `❌ ${url} está OFFLINE - Site não respondeu`
-        });
+      if (site.status === 'offline' && response.ok) {
+        // SITE VOLTOU!
+        await enviarAlertaTelegram(site.chatId, `✅ ${site.url} VOLTOU!`);
+        site.status = 'online';
       }
-
+      
+      // Primeira verificação
+      if (!site.status) {
+        site.status = response.ok ? 'online' : 'offline';
+      }
+      
     } catch (error) {
-      console.log('❌ Erro geral:', error);
-      return res.json({ 
-        status: 'error',
-        message: 'Erro interno do servidor'
-      });
+      console.log(`Erro em ${site.url}:`, error.message);
     }
   }
-
-  // GET - Status do serviço
-  res.json({ 
-    service: 'VigiaSite API',
-    status: 'online',
-    message: '✅ Sistema funcionando perfeitamente!',
-    timestamp: new Date().toISOString()
-  });
-};
-
-// Função para enviar alertas no Telegram (MANTIDA)
-async function sendTelegramAlert(message) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  
-  if (!token || !chatId) {
-    console.log('❌ Variáveis do Telegram não configuradas');
-    return false;
-  }
-
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'HTML'
-      })
-    });
-    
-    const result = await response.json();
-    console.log('📨 Alerta enviado:', result.ok ? '✅' : '❌');
-    return result.ok;
-  } catch (error) {
-    console.log('❌ Erro Telegram:', error.message);
-    return false;
-  }
 }
+
+// No handler, adicione no início:
+module.exports = async (req, res) => {
+  // Se for chamada automática do Cron (sem body)
+  if (req.method === 'GET' && !req.body) {
+    await verificarSitesAutomaticamente();
+    return res.json({ automatic: true, checked: sitesClientes.length });
+  }
+  
+  // ... resto do código atual
+};
