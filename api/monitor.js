@@ -1,4 +1,6 @@
-module.exports = (req, res) => {
+const fetch = require('node-fetch');
+
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -8,15 +10,39 @@ module.exports = (req, res) => {
   }
 
   if (req.method === 'POST') {
-    // Simula monitoramento (implementaremos depois)
-    return res.json({ 
-      status: 'online', 
-      message: '✅ Site está ONLINE (simulação)',
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const { url } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ error: 'URL é obrigatória' });
+      }
+
+      // VERIFICAÇÃO REAL DO SITE
+      const startTime = Date.now();
+      const response = await fetch(url);
+      const responseTime = Date.now() - startTime;
+
+      if (response.ok) {
+        return res.json({ 
+          status: 'online',
+          responseTime: responseTime,
+          message: `✅ ${url} está ONLINE (${responseTime}ms)`
+        });
+      } else {
+        return res.json({ 
+          status: 'offline', 
+          message: `❌ ${url} está OFFLINE - Status: ${response.status}`
+        });
+      }
+    } catch (error) {
+      return res.json({ 
+        status: 'error',
+        message: `❌ Erro ao verificar ${url}: ${error.message}`
+      });
+    }
   }
 
-  // GET
+  // GET - Status do serviço
   res.json({ 
     service: 'VigiaSite API',
     status: 'online',
