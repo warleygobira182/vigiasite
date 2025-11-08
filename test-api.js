@@ -1,3 +1,3 @@
-export default function handler(req, res) {
-  res.json({ working: true, message: "API finalmente funcionando!" });
-}
+module.exports = (req, res) => {
+  res.json({ working: true, message: "TESTE - API FUNCIONANDO!" });
+};
