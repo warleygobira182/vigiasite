@@ -1,49 +1,58 @@
-// Sistema de monitoramento para Vercel
-export default async function handler(req, res) {
-  // Permite CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+import fetch from 'node-fetch';
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+export default async function handler(request, response) {
+  // Configura CORS
+  response.setHeader('Access-Control-Allow-Origin', '*');
+  response.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (request.method === 'OPTIONS') {
+    return response.status(200).end();
   }
 
-  if (req.method === 'POST') {
+  if (request.method === 'POST') {
     try {
-      const { url } = req.body;
+      const { url } = await request.json();
       
       if (!url) {
-        return res.status(400).json({ error: 'URL é obrigatória' });
+        return response.status(400).json({ error: 'URL é obrigatória' });
       }
 
-      // Simula verificação (vamos implementar depois)
-      const isOnline = Math.random() > 0.2; // 80% de chance de estar online
+      console.log(`Verificando: ${url}`);
       
-      if (isOnline) {
-        return res.json({ 
+      // Verificação simples do site
+      const startTime = Date.now();
+      const result = await fetch(url, { 
+        method: 'HEAD',
+        timeout: 10000 
+      });
+      const responseTime = Date.now() - startTime;
+
+      if (result.ok) {
+        return response.json({ 
           status: 'online',
-          message: `✅ ${url} está ONLINE`
+          responseTime: responseTime,
+          message: `✅ ${url} está ONLINE (${responseTime}ms)`
         });
       } else {
-        return res.json({ 
+        return response.json({ 
           status: 'offline', 
-          message: `❌ ${url} está OFFLINE`
+          message: `❌ ${url} está OFFLINE - Status: ${result.status}`
         });
       }
     } catch (error) {
-      return res.json({ 
+      return response.json({ 
         status: 'error',
-        message: `Erro: ${error.message}`
+        message: `❌ Erro ao verificar: ${error.message}`
       });
     }
   }
 
-  // GET request - status do serviço
-  return res.json({ 
+  // GET - Status do serviço
+  return response.json({ 
     service: 'VigiaSite Monitor',
     status: 'online',
-    message: 'Sistema de monitoramento funcionando!',
-    version: '1.0'
+    message: 'API funcionando perfeitamente!',
+    timestamp: new Date().toISOString()
   });
 }
