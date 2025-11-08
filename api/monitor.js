@@ -9,29 +9,36 @@ module.exports = async (req, res) => {
 
   if (req.method === 'POST') {
     try {
-      const { url, chatId } = req.body;
+      const { url, testAlert = false } = req.body;
       
       if (!url) {
         return res.status(400).json({ error: 'URL é obrigatória' });
       }
 
-      // VERIFICAÇÃO REAL DO SITE (usando fetch nativo da Vercel)
+      console.log(`🔍 Verificando: ${url}`);
+      
+      // VERIFICAÇÃO DO SITE
       const startTime = Date.now();
       const response = await fetch(url);
       const responseTime = Date.now() - startTime;
 
       if (response.ok) {
-        // Site ONLINE
+        console.log(`✅ ${url} está ONLINE`);
+        
+        // SE pediu teste de alerta, envia mesmo estando online
+        if (testAlert) {
+          await sendTelegramAlert(`✅ TESTE: ${url} está ONLINE - Sistema funcionando!`);
+        }
+        
         return res.json({ 
           status: 'online',
           responseTime: responseTime,
           message: `✅ ${url} está ONLINE (${responseTime}ms)`
         });
       } else {
-        // Site OFFLINE - Enviar alerta para Telegram
-        if (chatId) {
-          await sendTelegramAlert(chatId, `🚨 ALERTA: ${url} está OFFLINE!`);
-        }
+        console.log(`❌ ${url} está OFFLINE`);
+        // Site OFFLINE - enviar alerta
+        await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está OFFLINE!\nStatus: ${response.status}`);
         
         return res.json({ 
           status: 'offline', 
@@ -39,15 +46,13 @@ module.exports = async (req, res) => {
         });
       }
     } catch (error) {
-      // Erro na verificação - Site OFFLINE
-      const { chatId } = req.body;
-      if (chatId) {
-        await sendTelegramAlert(chatId, `🚨 ALERTA: ${url} está INACESSÍVEL!`);
-      }
+      console.log(`❌ Erro: ${error.message}`);
+      // Erro - enviar alerta
+      await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está INACESSÍVEL!\nErro: ${error.message}`);
       
       return res.json({ 
         status: 'error',
-        message: `❌ ${url} está INACESSÍVEL - Erro: ${error.message}`
+        message: `❌ ${url} está INACESSÍVEL`
       });
     }
   }
@@ -55,24 +60,29 @@ module.exports = async (req, res) => {
   // GET - Status do serviço
   res.json({ 
     service: 'VigiaSite API',
-    status: 'online',
-    message: 'API funcionando perfeitamente!',
-    version: '1.0',
+    status: 'online', 
+    message: '✅ Sistema funcionando! Para testar alertas, faça POST para /api/monitor com: {"url": "https://exemplo.com", "testAlert": true}',
     timestamp: new Date().toISOString()
   });
 };
 
-// Função para enviar alertas no Telegram
-async function sendTelegramAlert(chatId, message) {
+// Função SIMPLIFICADA para enviar alertas
+async function sendTelegramAlert(message) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
   
-  if (!token) {
-    console.log('Token do Telegram não configurado');
-    return;
+  console.log('📤 Enviando alerta para Telegram...');
+  console.log('Token:', token ? '✅ Configurado' : '❌ Faltando');
+  console.log('Chat ID:', chatId ? '✅ Configurado' : '❌ Faltando');
+
+  if (!token || !chatId) {
+    console.log('❌ Variáveis do Telegram não configuradas corretamente');
+    return false;
   }
 
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
+    const response = await fetch(telegramUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,7 +91,12 @@ async function sendTelegramAlert(chatId, message) {
         parse_mode: 'HTML'
       })
     });
+    
+    const result = await response.json();
+    console.log('📨 Resposta do Telegram:', result.ok ? '✅ Sucesso' : '❌ Erro');
+    return result.ok;
   } catch (error) {
-    console.log('Erro ao enviar alerta para Telegram:', error);
+    console.log('❌ Erro ao enviar para Telegram:', error.message);
+    return false;
   }
 }
