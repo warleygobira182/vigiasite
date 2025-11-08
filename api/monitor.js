@@ -17,42 +17,61 @@ module.exports = async (req, res) => {
 
       console.log(`🔍 Verificando: ${url}`);
       
-      // VERIFICAÇÃO DO SITE
+      // VERIFICAÇÃO COM TRATAMENTO DE ERRO MELHORADO
       const startTime = Date.now();
-      const response = await fetch(url);
-      const responseTime = Date.now() - startTime;
-
-      if (response.ok) {
-        console.log(`✅ ${url} está ONLINE`);
+      
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
         
-        // SE pediu teste de alerta, envia mesmo estando online
-        if (testAlert) {
-          await sendTelegramAlert(`✅ TESTE: ${url} está ONLINE - Sistema funcionando!`);
-        }
-        
-        return res.json({ 
-          status: 'online',
-          responseTime: responseTime,
-          message: `✅ ${url} está ONLINE (${responseTime}ms)`
+        const response = await fetch(url, { 
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'VigiaSite-Monitor/1.0',
+            'Accept': '*/*'
+          }
         });
-      } else {
-        console.log(`❌ ${url} está OFFLINE`);
-        // Site OFFLINE - enviar alerta
-        await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está OFFLINE!\nStatus: ${response.status}`);
+        
+        clearTimeout(timeout);
+        const responseTime = Date.now() - startTime;
+
+        if (response.status >= 200 && response.status < 400) {
+          console.log(`✅ ${url} está ONLINE`);
+          
+          if (testAlert) {
+            await sendTelegramAlert(`✅ TESTE: ${url} está ONLINE (${responseTime}ms) - Sistema funcionando!`);
+          }
+          
+          return res.json({ 
+            status: 'online',
+            responseTime: responseTime,
+            message: `✅ ${url} está ONLINE (${responseTime}ms)`
+          });
+        } else {
+          console.log(`❌ ${url} está OFFLINE - Status: ${response.status}`);
+          await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está OFFLINE!\nStatus: ${response.status}`);
+          
+          return res.json({ 
+            status: 'offline', 
+            message: `❌ ${url} está OFFLINE - Status: ${response.status}`
+          });
+        }
+      } catch (fetchError) {
+        // Erro de rede - site inacessível
+        console.log(`❌ ${url} está INACESSÍVEL:`, fetchError.message);
+        await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está INACESSÍVEL!\nErro: ${fetchError.message}`);
         
         return res.json({ 
-          status: 'offline', 
-          message: `❌ ${url} está OFFLINE - Status: ${response.status}`
+          status: 'error',
+          message: `❌ ${url} está INACESSÍVEL - ${fetchError.message}`
         });
       }
+
     } catch (error) {
-      console.log(`❌ Erro: ${error.message}`);
-      // Erro - enviar alerta
-      await sendTelegramAlert(`🚨 ALERTA VIGIASITE\n❌ ${url} está INACESSÍVEL!\nErro: ${error.message}`);
-      
+      console.log('❌ Erro geral:', error);
       return res.json({ 
         status: 'error',
-        message: `❌ ${url} está INACESSÍVEL`
+        message: 'Erro interno do servidor'
       });
     }
   }
@@ -60,29 +79,24 @@ module.exports = async (req, res) => {
   // GET - Status do serviço
   res.json({ 
     service: 'VigiaSite API',
-    status: 'online', 
-    message: '✅ Sistema funcionando! Para testar alertas, faça POST para /api/monitor com: {"url": "https://exemplo.com", "testAlert": true}',
+    status: 'online',
+    message: '✅ Sistema funcionando!',
     timestamp: new Date().toISOString()
   });
 };
 
-// Função SIMPLIFICADA para enviar alertas
+// Função para enviar alertas no Telegram
 async function sendTelegramAlert(message) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   
-  console.log('📤 Enviando alerta para Telegram...');
-  console.log('Token:', token ? '✅ Configurado' : '❌ Faltando');
-  console.log('Chat ID:', chatId ? '✅ Configurado' : '❌ Faltando');
-
   if (!token || !chatId) {
-    console.log('❌ Variáveis do Telegram não configuradas corretamente');
+    console.log('❌ Variáveis do Telegram não configuradas');
     return false;
   }
 
   try {
-    const telegramUrl = `https://api.telegram.org/bot${token}/sendMessage`;
-    const response = await fetch(telegramUrl, {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -93,10 +107,10 @@ async function sendTelegramAlert(message) {
     });
     
     const result = await response.json();
-    console.log('📨 Resposta do Telegram:', result.ok ? '✅ Sucesso' : '❌ Erro');
+    console.log('📨 Alerta enviado:', result.ok ? '✅' : '❌');
     return result.ok;
   } catch (error) {
-    console.log('❌ Erro ao enviar para Telegram:', error.message);
+    console.log('❌ Erro Telegram:', error.message);
     return false;
   }
 }
