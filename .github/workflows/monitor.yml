@@ -13,6 +13,6 @@ jobs:
     - name: 🕐 Acionar verificação automática
       run: |
         echo "🚀 Executando verificação automática..."
-        curl -X GET "https://vigiasite.vercel.app/api/monitor" \
+        curl -X GET "https://vigiasite.vercel.app/api/monitor.js" \
           -H "Content-Type: application/json"
         echo "✅ Verificação concluída!"
