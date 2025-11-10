@@ -1,0 +1,21 @@
+name: 🚀 Monitoramento Automático VigiaSite
+
+on:
+  schedule:
+    # Executa a cada 10 minutos - FUNCIONA NO FREE TIER!
+    - cron: '*/10 * * * *'
+  # Também permite executar manualmente
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    name: Verificar sites automaticamente
+    
+    steps:
+    - name: 🕐 Acionar verificação automática
+      run: |
+        echo "🚀 Executando verificação automática..."
+        curl -X GET "https://vigiasite.vercel.app/api/monitor" \
+          -H "Content-Type: application/json"
+        echo "✅ Verificação concluída!"
