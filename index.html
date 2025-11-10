@@ -253,13 +253,39 @@
     </footer>
 
     <script>
-        // Form de lista de espera
-        document.getElementById('waitlist-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const email = this.querySelector('input[type="email"]').value;
-            alert('Obrigado! Em breve entraremos em contato com mais informações.');
-            this.reset();
-        });
+       // Form de lista de espera
+document.getElementById('waitlist-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const emailInput = this.querySelector('input[type="email"]');
+  const email = emailInput.value;
+  const button = this.querySelector('button');
+  
+  // Feedback visual
+  button.textContent = 'Salvando...';
+  button.disabled = true;
+  
+  try {
+    const response = await fetch('/api/save-lead.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('🎉 Obrigado! Você entrou na lista de espera. Em breve entraremos em contato!');
+      this.reset();
+    } else {
+      alert('❌ Erro ao salvar email. Tente novamente.');
+    }
+  } catch (error) {
+    alert('❌ Erro de conexão. Tente novamente.');
+  }
+  
+  button.textContent = 'Entrar na Lista de Espera';
+  button.disabled = false;
+});
     </script>
 </body>
 </html>
