@@ -13,8 +13,7 @@ jobs:
     - name: 🕐 Acionar verificação automática
       run: |
         echo "🚀 Executando verificação automática..."
-        response=$(curl -s -X POST "https://vigiasite.vercel.app/api/monitor.js" \
+        curl -X POST "https://vigiasite.vercel.app/api/monitor.js" \
           -H "Content-Type: application/json" \
-          -d '{"action": "cron-job"}')
-        echo "Resposta: $response"
+          -d '{"action": "cron-job"}'
         echo "✅ Verificação concluída!"
