@@ -93,6 +93,18 @@ module.exports = async (req, res) => {
 
   if (req.method === 'POST') {
     const { url, chatId, action } = req.body;
+
+     if (action === 'cron-job') {
+    console.log('⏰ GITHUB ACTIONS ACIONADO - Verificando sites...');
+    await verificarTodosSites();
+    return res.json({ 
+      success: true,
+      automatic: true, 
+      sitesMonitorados: sitesClientes.length,
+      message: 'Verificação automática concluída!',
+      timestamp: new Date().toISOString()
+    });
+  }
     
     // ➕ CLIENTE ADICIONANDO SITE PARA MONITORAMENTO AUTOMÁTICO
     if (action === 'add-site' && url && chatId) {
