@@ -94,6 +94,34 @@ module.exports = async (req, res) => {
   if (req.method === 'POST') {
     const { url, chatId, action } = req.body;
 
+    // 📊 LISTAR TODOS OS CLIENTES (adicionar com os outros actions)
+if (action === 'list-all') {
+  console.log('📊 Listando todos os clientes...');
+  
+  // Agrupar sites por cliente
+  const clientes = {};
+  sitesClientes.forEach(site => {
+    if (!clientes[site.chatId]) {
+      clientes[site.chatId] = {
+        chatId: site.chatId,
+        sites: []
+      };
+    }
+    clientes[site.chatId].sites.push({
+      url: site.url,
+      status: site.status || 'pendente',
+      dataCadastro: site.dataCadastro || new Date().toISOString()
+    });
+  });
+  
+  return res.json({
+    success: true,
+    totalClientes: Object.keys(clientes).length,
+    totalSites: sitesClientes.length,
+    clientes: Object.values(clientes)
+  });
+}
+
      if (action === 'cron-job') {
     console.log('⏰ GITHUB ACTIONS ACIONADO - Verificando sites...');
     await verificarTodosSites();
