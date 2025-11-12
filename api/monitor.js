@@ -1,7 +1,7 @@
 // BANCO DE DADOS SIMPLES (em produção usaríamos um banco real)
 let sitesClientes = [];
 
-// FUNÇÃO QUE VERIFICA TODOS OS SITES AUTOMATICAMENTE
+// FUNÇÃO QUE VERIFICA TODOS OS SITES AUTOMÁTICAMENTE
 async function verificarTodosSites() {
   console.log('🤖 VERIFICAÇÃO AUTOMÁTICA INICIADA -', new Date().toISOString());
   
@@ -66,6 +66,7 @@ async function verificarTodosSites() {
       }
     }
   }
+  
   console.log('📅 Verificando vencimentos...');
   await verificarVencimentos();
   
@@ -96,96 +97,97 @@ module.exports = async (req, res) => {
   if (req.method === 'POST') {
     const { url, chatId, action } = req.body;
 
-    // 📊 LISTAR TODOS OS CLIENTES (adicionar com os outros actions)
-if (action === 'list-all') {
-  console.log('📊 Listando todos os clientes...');
-  
-  // Agrupar sites por cliente
-  const clientes = {};
-  sitesClientes.forEach(site => {
-    if (!clientes[site.chatId]) {
-      clientes[site.chatId] = {
-        chatId: site.chatId,
-        sites: []
-      };
+    // 📊 LISTAR TODOS OS CLIENTES
+    if (action === 'list-all') {
+      console.log('📊 Listando todos os clientes...');
+      
+      const clientes = {};
+      sitesClientes.forEach(site => {
+        if (!clientes[site.chatId]) {
+          clientes[site.chatId] = {
+            chatId: site.chatId,
+            sites: []
+          };
+        }
+        clientes[site.chatId].sites.push({
+          url: site.url,
+          status: site.status || 'pendente',
+          dataCadastro: site.dataCadastro || new Date().toISOString(),
+          dataVencimento: site.dataVencimento || ''
+        });
+      });
+      
+      return res.json({
+        success: true,
+        totalClientes: Object.keys(clientes).length,
+        totalSites: sitesClientes.length,
+        clientes: Object.values(clientes)
+      });
     }
-    clientes[site.chatId].sites.push({
-      url: site.url,
-      status: site.status || 'pendente',
-      dataCadastro: site.dataCadastro || new Date().toISOString()
-    });
-  });
-  
-  return res.json({
-    success: true,
-    totalClientes: Object.keys(clientes).length,
-    totalSites: sitesClientes.length,
-    clientes: Object.values(clientes)
-  });
-}
 
-     if (action === 'cron-job') {
-    console.log('⏰ GITHUB ACTIONS ACIONADO - Verificando sites...');
-    await verificarTodosSites();
-    return res.json({ 
-      success: true,
-      automatic: true, 
-      sitesMonitorados: sitesClientes.length,
-      message: 'Verificação automática concluída!',
-      timestamp: new Date().toISOString()
-    });
-  }
+    // ⏰ CHAMADA DO GITHUB ACTIONS
+    if (action === 'cron-job') {
+      console.log('⏰ GITHUB ACTIONS ACIONADO - Verificando sites...');
+      await verificarTodosSites();
+      return res.json({ 
+        success: true,
+        automatic: true, 
+        sitesMonitorados: sitesClientes.length,
+        message: 'Verificação automática concluída!',
+        timestamp: new Date().toISOString()
+      });
+    }
     
     // ➕ CLIENTE ADICIONANDO SITE PARA MONITORAMENTO AUTOMÁTICO
-if (action === 'add-site' && url && chatId) {
-  // Verifica se já existe
-  const siteExistente = sitesClientes.find(s => s.url === url && s.chatId === chatId);
-  if (siteExistente) {
-    return res.json({ success: false, message: 'Site já está sendo monitorado' });
-  }
-  
-  // Adiciona novo site
-  const novoSite = { 
-    url: url.startsWith('http') ? url : `https://${url}`,
-    chatId, 
-    status: null,
-    dataCadastro: new Date().toISOString(),
-    dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias
-  };
-  
-  sitesClientes.push(novoSite);
-  console.log(`📝 Novo site adicionado: ${url} para chatId: ${chatId}`);
-  
-  // 🆕 SALVA NA PLANILHA - Status "cadastrado"
-  await salvarNaPlanilha(chatId, url, 'cadastrado');
-  
-  // Verificação imediata do novo site
-  try {
-    const response = await fetch(novoSite.url, { timeout: 10000 });
-    novoSite.status = response.ok ? 'online' : 'offline';
-    
-    // 🆕 ATUALIZA PLANILHA - Status real (online/offline)
-    await salvarNaPlanilha(chatId, url, novoSite.status);
-    
-    await enviarAlertaTelegram(chatId,
-      novoSite.status === 'online'
-        ? `✅ VIGIASITE CONFIGURADO\n\n🟢 ${url} está ONLINE!\nAgora monitorando 24/7 com verificações a cada 10 minutos.`
-        : `⚠️ VIGIASITE CONFIGURADO\n\n🔴 ${url} está OFFLINE!\nMonitorando e avisarei quando voltar.`
-    );
-    
-    return res.json({ 
-      success: true, 
-      status: novoSite.status,
-      message: 'Site adicionado para monitoramento automático 24/7!'
-    });
-  } catch (error) {
-    novoSite.status = 'error';
-    // 🆕 SALVA ERRO NA PLANILHA
-    await salvarNaPlanilha(chatId, url, 'erro');
-    await enviarAlertaTelegram(chatId, `❌ ${url} adicionado mas está INACESSÍVEL!`);
-    return res.json({ success: false, message: 'Site inacessível' });
-  }
-}
+    if (action === 'add-site' && url && chatId) {
+      // Verifica se já existe
+      const siteExistente = sitesClientes.find(s => s.url === url && s.chatId === chatId);
+      if (siteExistente) {
+        return res.json({ success: false, message: 'Site já está sendo monitorado' });
+      }
+      
+      // Adiciona novo site
+      const novoSite = { 
+        url: url.startsWith('http') ? url : `https://${url}`,
+        chatId, 
+        status: null,
+        dataCadastro: new Date().toISOString(),
+        dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias
+      };
+      
+      sitesClientes.push(novoSite);
+      console.log(`📝 Novo site adicionado: ${url} para chatId: ${chatId}`);
+      
+      // 🆕 SALVA NA PLANILHA - Status "cadastrado"
+      await salvarNaPlanilha(chatId, url, 'cadastrado');
+      
+      // Verificação imediata do novo site
+      try {
+        const response = await fetch(novoSite.url, { timeout: 10000 });
+        novoSite.status = response.ok ? 'online' : 'offline';
+        
+        // 🆕 ATUALIZA PLANILHA - Status real (online/offline)
+        await salvarNaPlanilha(chatId, url, novoSite.status);
+        
+        await enviarAlertaTelegram(chatId,
+          novoSite.status === 'online'
+            ? `✅ VIGIASITE CONFIGURADO\n\n🟢 ${url} está ONLINE!\nAgora monitorando 24/7 com verificações a cada 10 minutos.`
+            : `⚠️ VIGIASITE CONFIGURADO\n\n🔴 ${url} está OFFLINE!\nMonitorando e avisarei quando voltar.`
+        );
+        
+        return res.json({ 
+          success: true, 
+          status: novoSite.status,
+          message: 'Site adicionado para monitoramento automático 24/7!'
+        });
+      } catch (error) {
+        novoSite.status = 'error';
+        // 🆕 SALVA ERRO NA PLANILHA
+        await salvarNaPlanilha(chatId, url, 'erro');
+        await enviarAlertaTelegram(chatId, `❌ ${url} adicionado mas está INACESSÍVEL!`);
+        return res.json({ success: false, message: 'Site inacessível' });
+      }
+    }
     
     // 📊 CLIENTE SOLICITANDO STATUS
     if (action === 'status' && chatId) {
@@ -194,6 +196,15 @@ if (action === 'add-site' && url && chatId) {
         success: true,
         sites: sitesDoCliente,
         total: sitesDoCliente.length
+      });
+    }
+
+    // 📋 VER DADOS DA PLANILHA TEMPORÁRIA
+    if (action === 'planilha-temp') {
+      return res.json({
+        success: true,
+        totalRegistros: global.planilhaTemp ? global.planilhaTemp.length : 0,
+        registros: global.planilhaTemp || []
       });
     }
   }
@@ -209,7 +220,7 @@ if (action === 'add-site' && url && chatId) {
   });
 };
 
-// 📱 FUNÇÃO TELEGRAM (mantida)
+// 📱 FUNÇÃO TELEGRAM
 async function enviarAlertaTelegram(chatId, message) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
@@ -236,13 +247,11 @@ async function enviarAlertaTelegram(chatId, message) {
   }
 }
 
-// Função para salvar na planilha (adicionar no final do arquivo, antes do último })
+// 📊 FUNÇÃO PARA SALVAR NA PLANILHA
 async function salvarNaPlanilha(chatId, url, status) {
   console.log(`📊 [PLANILHA] ${url} - ${status} - Chat: ${chatId}`);
   
-  // Por enquanto só registra nos logs - depois integramos com Google Sheets
   try {
-    // 🆕 Podemos salvar em um array temporário também
     if (!global.planilhaTemp) global.planilhaTemp = [];
     global.planilhaTemp.push({
       chatId,
@@ -257,7 +266,7 @@ async function salvarNaPlanilha(chatId, url, status) {
   }
 }
 
-// Função para verificar vencimentos
+// 📅 FUNÇÃO PARA VERIFICAR VENCIMENTOS
 async function verificarVencimentos() {
   console.log('📅 Verificando vencimentos...');
   const agora = new Date();
