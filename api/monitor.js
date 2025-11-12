@@ -66,6 +66,8 @@ async function verificarTodosSites() {
       }
     }
   }
+  console.log('📅 Verificando vencimentos...');
+  await verificarVencimentos();
   
   console.log('✅ VERIFICAÇÃO AUTOMÁTICA CONCLUÍDA');
 }
@@ -135,46 +137,55 @@ if (action === 'list-all') {
   }
     
     // ➕ CLIENTE ADICIONANDO SITE PARA MONITORAMENTO AUTOMÁTICO
-    if (action === 'add-site' && url && chatId) {
-      // Verifica se já existe
-      const siteExistente = sitesClientes.find(s => s.url === url && s.chatId === chatId);
-      if (siteExistente) {
-        return res.json({ success: false, message: 'Site já está sendo monitorado' });
-      }
-      
-      // Adiciona novo site
-      const novoSite = { 
-        url: url.startsWith('http') ? url : `https://${url}`,
-        chatId, 
-        status: null,
-        dataCadastro: new Date().toISOString()
-      };
-      
-      sitesClientes.push(novoSite);
-      console.log(`📝 Novo site adicionado: ${url} para chatId: ${chatId}`);
-      
-      // Verificação imediata do novo site
-      try {
-        const response = await fetch(novoSite.url, { timeout: 10000 });
-        novoSite.status = response.ok ? 'online' : 'offline';
-        
-        await enviarAlertaTelegram(chatId,
-          novoSite.status === 'online'
-            ? `✅ VIGIASITE CONFIGURADO\n\n🟢 ${url} está ONLINE!\nAgora monitorando 24/7 com verificações a cada 10 minutos.`
-            : `⚠️ VIGIASITE CONFIGURADO\n\n🔴 ${url} está OFFLINE!\nMonitorando e avisarei quando voltar.`
-        );
-        
-        return res.json({ 
-          success: true, 
-          status: novoSite.status,
-          message: 'Site adicionado para monitoramento automático 24/7!'
-        });
-      } catch (error) {
-        novoSite.status = 'error';
-        await enviarAlertaTelegram(chatId, `❌ ${url} adicionado mas está INACESSÍVEL!`);
-        return res.json({ success: false, message: 'Site inacessível' });
-      }
-    }
+if (action === 'add-site' && url && chatId) {
+  // Verifica se já existe
+  const siteExistente = sitesClientes.find(s => s.url === url && s.chatId === chatId);
+  if (siteExistente) {
+    return res.json({ success: false, message: 'Site já está sendo monitorado' });
+  }
+  
+  // Adiciona novo site
+  const novoSite = { 
+    url: url.startsWith('http') ? url : `https://${url}`,
+    chatId, 
+    status: null,
+    dataCadastro: new Date().toISOString(),
+    dataVencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias
+  };
+  
+  sitesClientes.push(novoSite);
+  console.log(`📝 Novo site adicionado: ${url} para chatId: ${chatId}`);
+  
+  // 🆕 SALVA NA PLANILHA - Status "cadastrado"
+  await salvarNaPlanilha(chatId, url, 'cadastrado');
+  
+  // Verificação imediata do novo site
+  try {
+    const response = await fetch(novoSite.url, { timeout: 10000 });
+    novoSite.status = response.ok ? 'online' : 'offline';
+    
+    // 🆕 ATUALIZA PLANILHA - Status real (online/offline)
+    await salvarNaPlanilha(chatId, url, novoSite.status);
+    
+    await enviarAlertaTelegram(chatId,
+      novoSite.status === 'online'
+        ? `✅ VIGIASITE CONFIGURADO\n\n🟢 ${url} está ONLINE!\nAgora monitorando 24/7 com verificações a cada 10 minutos.`
+        : `⚠️ VIGIASITE CONFIGURADO\n\n🔴 ${url} está OFFLINE!\nMonitorando e avisarei quando voltar.`
+    );
+    
+    return res.json({ 
+      success: true, 
+      status: novoSite.status,
+      message: 'Site adicionado para monitoramento automático 24/7!'
+    });
+  } catch (error) {
+    novoSite.status = 'error';
+    // 🆕 SALVA ERRO NA PLANILHA
+    await salvarNaPlanilha(chatId, url, 'erro');
+    await enviarAlertaTelegram(chatId, `❌ ${url} adicionado mas está INACESSÍVEL!`);
+    return res.json({ success: false, message: 'Site inacessível' });
+  }
+}
     
     // 📊 CLIENTE SOLICITANDO STATUS
     if (action === 'status' && chatId) {
@@ -223,4 +234,68 @@ async function enviarAlertaTelegram(chatId, message) {
     console.log('❌ Erro Telegram:', error.message);
     return false;
   }
+}
+
+// Função para salvar na planilha (adicionar no final do arquivo, antes do último })
+async function salvarNaPlanilha(chatId, url, status) {
+  console.log(`📊 [PLANILHA] ${url} - ${status} - Chat: ${chatId}`);
+  
+  // Por enquanto só registra nos logs - depois integramos com Google Sheets
+  try {
+    // 🆕 Podemos salvar em um array temporário também
+    if (!global.planilhaTemp) global.planilhaTemp = [];
+    global.planilhaTemp.push({
+      chatId,
+      url, 
+      status,
+      timestamp: new Date().toISOString()
+    });
+    
+    console.log(`✅ Dados preparados para planilha: ${global.planilhaTemp.length} registros`);
+  } catch (error) {
+    console.log('❌ Erro ao preparar dados para planilha:', error.message);
+  }
+}
+
+// Função para verificar vencimentos
+async function verificarVencimentos() {
+  console.log('📅 Verificando vencimentos...');
+  const agora = new Date();
+  const alerta7Dias = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
+  
+  let vencimentosProximos = 0;
+  
+  for (const site of sitesClientes) {
+    if (!site.dataVencimento) continue;
+    
+    const vencimento = new Date(site.dataVencimento);
+    
+    // Se vencer em até 7 dias
+    if (vencimento <= alerta7Dias && vencimento > agora) {
+      const diasRestantes = Math.ceil((vencimento - agora) / (24 * 60 * 60 * 1000));
+      
+      await enviarAlertaTelegram(site.chatId,
+        `⚠️ **ALERTA DE VENCIMENTO**\n\n` +
+        `🌐 **Site:** ${site.url}\n` +
+        `📅 **Vence em:** ${diasRestantes} dias\n` +
+        `💳 **Renove para continuar monitorado!**`
+      );
+      
+      vencimentosProximos++;
+    }
+    
+    // Se venceu
+    if (vencimento <= agora && site.status !== 'vencido') {
+      await enviarAlertaTelegram(site.chatId,
+        `❌ **SERVIÇO VENCIDO**\n\n` +
+        `🌐 **Site:** ${site.url}\n` +
+        `📅 **Venceu em:** ${vencimento.toLocaleDateString('pt-BR')}\n` +
+        `💳 **Renove para reativar o monitoramento!**`
+      );
+      
+      site.status = 'vencido';
+    }
+  }
+  
+  console.log(`📅 Vencimentos próximos: ${vencimentosProximos}`);
 }
